@@ -22,6 +22,7 @@ data-files:
 library
   exposed-modules:
     MiniLight.Quartz
+    Paths_minilight_quartz
   -- other-modules:
   -- other-extensions:
   build-depends:
