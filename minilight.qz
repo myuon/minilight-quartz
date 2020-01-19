@@ -1,0 +1,71 @@
+external func ffi_loadPicture(path: string): Figure;
+
+external func ffi_rectangle(w: int,
+                            h: int,
+                            r: int,
+                            g: int,
+                            b: int,
+                            a: int): Figure;
+
+external func ffi_text(str: string): Figure;
+
+external func ffi_translate(x: int, y: int, fig: Figure): Figure;
+
+external func ffi_extend9tiles(fig: Figure, x: int, y: int): Figure;
+
+record Position {
+  x: int,
+  y: int,
+}
+
+record Color {
+  r: int,
+  g: int,
+  b: int,
+  a: int,
+}
+
+derive Color  {
+  func new(r: int, g: int, b: int, a: int): self {
+    Color {r: r, g: g, b: b, a: a}
+  }
+}
+
+record Size {
+  w: int,
+  h: int,
+}
+
+derive Size  {
+  func new(w: int, h: int): self {
+    Size {w: w, h: h}
+  }
+}
+
+derive Figure  {
+  func picture(path: string): self {
+    ffi_loadPicture(path)
+  }
+  
+  func rectangle(size: Size, color: Color): self {
+    ffi_rectangle(size.w, size.h, color.r, color.g, color.b, color.a)
+  }
+  
+  func text(str: string): self {
+    ffi_text(str)
+  }
+  
+  func translate(self, x: int, y: int): self {
+    ffi_translate(x, y, self)
+  }
+  
+  func extend_9tiles(self, x: int, y: int): self {
+    ffi_extend9tiles(self, x, y)
+  }
+}
+
+external func ffi_mouse_move(): Position;
+
+func useMouseMove(): Position {
+  ffi_mouse_move()
+}

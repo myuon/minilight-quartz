@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 module MiniLight.Quartz where
 
 import Control.Error
@@ -17,11 +18,13 @@ import qualified Data.Primitive.Array as A
 import qualified Data.Map as M
 import GHC.Exts (IsList(..))
 import Language.Quartz
+import Language.Quartz.AST
 import Language.Quartz.Std
 import Language.Quartz.Lexer (AlexPosn)
 import MiniLight
 import Linear
 import qualified SDL
+import Paths_minilight_quartz
 
 extend9tiles :: Figure -> V2 Int -> MiniLight Figure
 extend9tiles fig size = do
@@ -210,7 +213,7 @@ evalQuartzComponent
   -> QuartzComponentState
   -> LightT env m [Figure]
 evalQuartzComponent content state = do
-  lib    <- liftIO $ readFile "minilight.qz"
+  lib    <- liftIO $ readFile =<< getDataFileName "minilight.qz"
   result <- liftMiniLight
     $ runModuleWith (minilightBindings state) (lib ++ content)
 
