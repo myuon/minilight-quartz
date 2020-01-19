@@ -1,0 +1,6 @@
+packages:
+  ./
+source-repository-package
+  type: git
+  location: https://github.com/myuon/quartz
+  tag: 0a98a86c5f63d009567379f7321cc72581946eb9
