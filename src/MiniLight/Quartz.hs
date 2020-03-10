@@ -109,7 +109,7 @@ data QuartzComponent = QuartzComponent {
 
 newQuartzComponent :: QuartzComponent
 newQuartzComponent = QuartzComponent
-  { expr    = "func main(): array<Figure> { [] }"
+  { expr    = "func main(): array[Figure] { array![] }"
   , state   = QuartzComponentState {mousePosition = 0}
   , counter = 0
   }
