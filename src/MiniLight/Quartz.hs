@@ -145,43 +145,47 @@ minilightBindings state = M.fromList
   [ ( Id ["ffi_loadPicture"]
     , \[d1] -> do
       e1 <- (fromDynamic d1 :: Maybe (Expr AlexPosn)) ?? InvalidExpr d1
-      case e1 of
+      case unwrapExpr e1 of
         Lit (StringLit s) -> do
           fig <- lift $ picture s
-          return $ Any $ Dynamic' Nothing $ toDyn (fig :: Figure)
+          return $ srcSpanExpr' e1 $ Any $ Dynamic' Nothing $ toDyn
+            (fig :: Figure)
     )
   , ( Id ["ffi_extend9tiles"]
     , \[d1, d2, d3] -> do
       e1 <- (fromDynamic d1 :: Maybe (Expr AlexPosn)) ?? InvalidExpr d1
       e2 <- (fromDynamic d2 :: Maybe (Expr AlexPosn)) ?? InvalidExpr d2
       e3 <- (fromDynamic d3 :: Maybe (Expr AlexPosn)) ?? InvalidExpr d3
-      case (e1, e2, e3) of
+      case (unwrapExpr e1, unwrapExpr e2, unwrapExpr e3) of
         (Any (Dynamic' _ fig), Lit (IntLit x), Lit (IntLit y)) -> do
           fig <- lift
             $ extend9tiles ((\(Just f) -> f) $ fromDynamic fig) (V2 x y)
-          return $ Any $ Dynamic' Nothing $ toDyn (fig :: Figure)
+          return $ srcSpanExpr e1 e3 $ Any $ Dynamic' Nothing $ toDyn
+            (fig :: Figure)
     )
   , ( Id ["ffi_text"]
     , \[d1] -> do
       e1 <- (fromDynamic d1 :: Maybe (Expr AlexPosn)) ?? InvalidExpr d1
-      case e1 of
+      case unwrapExpr e1 of
         Lit (StringLit s) -> lift $ do
           font <- Font.loadFontFrom $ Font.Config
             (FontDescriptor "IPAGothic" (FontStyle False False))
             24
             255
           textTexture <- text font 255 $ T.pack s
-          return $ Any $ Dynamic' Nothing $ toDyn (textTexture :: Figure)
+          return $ srcSpanExpr' e1 $ Any $ Dynamic' Nothing $ toDyn
+            (textTexture :: Figure)
     )
   , ( Id ["ffi_translate"]
     , \[d1, d2, d3] -> do
       e1 <- (fromDynamic d1 :: Maybe (Expr AlexPosn)) ?? InvalidExpr d1
       e2 <- (fromDynamic d2 :: Maybe (Expr AlexPosn)) ?? InvalidExpr d2
       e3 <- (fromDynamic d3 :: Maybe (Expr AlexPosn)) ?? InvalidExpr d3
-      case (e1, e2, e3) of
+      case (unwrapExpr e1, unwrapExpr e2, unwrapExpr e3) of
         (Lit (IntLit x), Lit (IntLit y), Any (Dynamic' _ fig)) -> do
           let fig' = translate (V2 x y) $ (\(Just f) -> f) $ fromDynamic fig
-          return $ Any $ Dynamic' Nothing $ toDyn (fig' :: Figure)
+          return $ srcSpanExpr e1 e3 $ Any $ Dynamic' Nothing $ toDyn
+            (fig' :: Figure)
     )
   , ( Id ["ffi_rectangle"]
     , \[d1, d2, d3, d4, d5, d6] -> do
@@ -191,19 +195,30 @@ minilightBindings state = M.fromList
       e4 <- (fromDynamic d4 :: Maybe (Expr AlexPosn)) ?? InvalidExpr d4
       e5 <- (fromDynamic d5 :: Maybe (Expr AlexPosn)) ?? InvalidExpr d5
       e6 <- (fromDynamic d6 :: Maybe (Expr AlexPosn)) ?? InvalidExpr d6
-      case (e1, e2, e3, e4, e5, e6) of
-        (Lit (IntLit w), Lit (IntLit h), Lit (IntLit r), Lit (IntLit g), Lit (IntLit b), Lit (IntLit a))
-          -> do
-            fig <- lift
-              $ rectangleFilled (fmap fromIntegral $ V4 r g b a) (V2 w h)
-            return $ Any $ Dynamic' Nothing $ toDyn (fig :: Figure)
+      case
+          ( unwrapExpr e1
+          , unwrapExpr e2
+          , unwrapExpr e3
+          , unwrapExpr e4
+          , unwrapExpr e5
+          , unwrapExpr e6
+          )
+        of
+          (Lit (IntLit w), Lit (IntLit h), Lit (IntLit r), Lit (IntLit g), Lit (IntLit b), Lit (IntLit a))
+            -> do
+              fig <- lift
+                $ rectangleFilled (fmap fromIntegral $ V4 r g b a) (V2 w h)
+              return $ srcSpanExpr e1 e6 $ Any $ Dynamic' Nothing $ toDyn
+                (fig :: Figure)
     )
   , ( Id ["ffi_mouse_move"]
     , \[] -> do
       let pos = mousePosition state
-      return $ RecordOf
+      return $ exprPos0 $ RecordOf
         "Position"
-        [("x", Lit (IntLit (pos ^. _x))), ("y", Lit (IntLit (pos ^. _y)))]
+        [ ("x", exprPos0 (Lit (IntLit (pos ^. _x))))
+        , ("y", exprPos0 (Lit (IntLit (pos ^. _y))))
+        ]
     )
   ]
 
@@ -220,13 +235,17 @@ evalQuartzComponent content state = do
   case result of
     Left  e -> Caster.err e >> return []
     Right m -> do
-      let arr = (\(Array marr) -> getMArray marr) m
+      let arr = (\(ExprLoc _ _ (Array marr)) -> getMArray marr) m
       imarr <- liftIO $ A.unsafeFreezeArray arr
       let items = toList imarr
 
-      case sequence $ map (\(Any (Dynamic' _ dyn)) -> fromDynamic dyn) items of
-        Nothing  -> Caster.err ("Nothing for Dynamic" :: String) >> return []
-        Just fs' -> return fs'
+      case
+          sequence $ map
+            (\(ExprLoc _ _ (Any (Dynamic' _ dyn))) -> fromDynamic dyn)
+            items
+        of
+          Nothing  -> Caster.err ("Nothing for Dynamic" :: String) >> return []
+          Just fs' -> return fs'
 
 reload
   :: (HasLoaderEnv env, HasLightEnv env, HasLoopEnv env, MonadIO m, MonadMask m)
